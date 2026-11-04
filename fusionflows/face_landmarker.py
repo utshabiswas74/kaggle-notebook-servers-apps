@@ -299,7 +299,13 @@ def forward_with_peppa_wutz(crop_vision_frame : VisionFrame) -> Prediction:
 def forward_fan_68_5(face_landmark_5 : FaceLandmark5) -> FaceLandmark68:
 	face_landmarker = get_inference_pool().get('fan_68_5')
 	if face_landmarker is None:
-		return numpy.zeros((68, 2), dtype = numpy.float32)
+		fallback = numpy.zeros((68, 2), dtype = numpy.float32)
+		fallback[36:42] = face_landmark_5[0]
+		fallback[42:48] = face_landmark_5[1]
+		fallback[27:36] = face_landmark_5[2]
+		fallback[48:60] = face_landmark_5[3]
+		fallback[60:68] = face_landmark_5[4]
+		return fallback
 
 	with conditional_thread_semaphore():
 		face_landmark_68_5 = face_landmarker.run(None,

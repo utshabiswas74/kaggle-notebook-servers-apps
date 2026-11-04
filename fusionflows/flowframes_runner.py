@@ -87,9 +87,9 @@ def interpolate_video_with_progress(
 	model_dir = get_rife_model_dir()
 
 	if not rife_exe or not model_dir:
-		err_msg = "[FUSIONFLOWS] RIFE 3.1 binaries or model files not found!"
-		logger.error(err_msg, __name__)
-		yield (None, err_msg)
+		err_msg = "[FUSIONFLOWS] RIFE 3.1 not installed on Linux, keeping original video"
+		logger.warn(err_msg, __name__)
+		yield (video_path, err_msg)
 		return
 
 	if output_path is None:
