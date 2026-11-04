@@ -37,6 +37,8 @@ ENV/
 # Temporary files
 temp/
 .temp/
+fusionflows-models.zip
+models_bundle/
 *.log
 *logs.txt
 test_assets/

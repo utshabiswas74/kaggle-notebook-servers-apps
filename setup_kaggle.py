@@ -95,7 +95,7 @@ def install_requirements() -> None:
 
 
 def setup_cloudflared() -> None:
-    print("\n--- [4/4] Setting up Cloudflare Tunnel Client ---")
+    print("\n--- [4/5] Setting up Cloudflare Tunnel Client ---")
     cf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cloudflared-linux-amd64")
     if not os.path.isfile(cf_path):
         cf_url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
@@ -107,6 +107,31 @@ def setup_cloudflared() -> None:
     print("Cloudflared client ready.")
 
 
+def setup_models_bundle() -> None:
+    print("\n--- [5/5] Extracting Bundled Models from GitHub Releases ---")
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    assets_models_dir = os.path.join(repo_root, ".assets", "models")
+    os.makedirs(assets_models_dir, exist_ok=True)
+
+    test_file = os.path.join(assets_models_dir, "inswapper_128.onnx")
+    if os.path.isfile(test_file) and os.path.getsize(test_file) > 100_000_000:
+        print(f"Models already extracted in {assets_models_dir}")
+        return
+
+    bundle_url = "https://github.com/utshabiswas74/kaggle-notebook-servers-apps/releases/download/v1.0.0/fusionflows-models.zip"
+    zip_path = os.path.join(repo_root, "fusionflows-models.zip")
+
+    print("Downloading pre-packaged model bundle from GitHub Releases...")
+    run_command(f"wget -q -c {bundle_url} -O {zip_path}")
+
+    print(f"Extracting models to {assets_models_dir}...")
+    run_command(f"unzip -q -o {zip_path} -d {assets_models_dir}")
+
+    if os.path.isfile(zip_path):
+        os.remove(zip_path)
+    print("All essential neural models are extracted and ready.")
+
+
 def main() -> None:
     print("==================================================")
     print(" FusionFlows Kaggle Automated Setup Starting...   ")
@@ -115,6 +140,7 @@ def main() -> None:
     setup_onnxruntime_gpu()
     install_requirements()
     setup_cloudflared()
+    setup_models_bundle()
     print("\n==================================================")
     print(" [DONE] Setup Completed Successfully!            ")
     print(" Run '!python run_kaggle.py' to start the app.    ")
