@@ -1,0 +1,42 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Caches and assets
+.assets/
+.caches/
+.jobs/
+.claude/
+.idea/
+.vscode/
+
+# Build artifacts and binaries (exceeds GitHub 100MB limit)
+dist/
+build/
+bin/
+Output/
+*.exe
+*.dll
+
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Model files
+*.onnx
+*.pth
+*.pt
+*.bin
+*.safetensors
+*.hash
+
+# Temporary files
+temp/
+.temp/
+*.log
+test_assets/
+*_screenshot.png
