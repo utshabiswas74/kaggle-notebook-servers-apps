@@ -75,6 +75,21 @@ def read_video_frame(video_reader : VideoReader) -> Optional[VisionFrame]:
 		video_reader['frame_number'] = video_reader.get('frame_number') + 1
 		return vision_frame.reshape(height, width, channel_total)
 
+	# Fallback to OpenCV VideoCapture to ensure frames are never silently lost
+	try:
+		import cv2
+		capture = cv2.VideoCapture(video_reader.get('file_path'))
+		capture.set(cv2.CAP_PROP_POS_FRAMES, video_reader.get('frame_number'))
+		success, cv_frame = capture.read()
+		capture.release()
+		if success and cv_frame is not None:
+			video_reader['frame_number'] = video_reader.get('frame_number') + 1
+			if (cv_frame.shape[1], cv_frame.shape[0]) != (width, height):
+				cv_frame = cv2.resize(cv_frame, (width, height))
+			return cv_frame
+	except Exception:
+		pass
+
 	return None
 
 

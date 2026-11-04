@@ -96,11 +96,28 @@ def select_video_frames(video_path : str, frame_number : int = 0, frame_offset :
 			video_reader = video_manager.get_reader(video_path, 'select_video_frames')
 			frame_set = video_manager.read_video_frames(video_reader, max(frame_start, 0), frame_end)
 
+			if not frame_set:
+				try:
+					import cv2
+					capture = cv2.VideoCapture(video_path)
+					capture.set(cv2.CAP_PROP_POS_FRAMES, max(frame_start, 0))
+					success, cv_frame = capture.read()
+					capture.release()
+					if success and cv_frame is not None:
+						frame_set[max(frame_start, 0)] = cv_frame
+				except Exception:
+					pass
+
 			for frame_number in range(frame_start, frame_end + 1):
-				vision_frame = create_empty_vision_frame()
+				vision_frame = None
 
 				if frame_number in frame_set:
 					vision_frame = frame_set.get(frame_number)
+				elif frame_set:
+					closest_key = min(frame_set.keys(), key = lambda k: abs(k - frame_number))
+					vision_frame = frame_set.get(closest_key)
+				else:
+					vision_frame = create_empty_vision_frame()
 
 				vision_frames.append(vision_frame)
 

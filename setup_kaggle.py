@@ -20,14 +20,15 @@ def run_command(cmd: str, check: bool = True) -> int:
 
 def install_ffmpeg() -> None:
     print("\n--- [1/4] Checking FFmpeg & FFprobe ---")
-    ffmpeg_exists = shutil.which("ffmpeg")
-    ffprobe_exists = shutil.which("ffprobe")
+    try:
+        ver_output = subprocess.check_output(["ffmpeg", "-version"], text=True, stderr=subprocess.DEVNULL)
+        if "static" in ver_output.lower() or "johnvansickle" in ver_output.lower() or "version 7" in ver_output.lower() or "version 6" in ver_output.lower():
+            print(f"Modern static FFmpeg already configured.")
+            return
+    except Exception:
+        pass
 
-    if ffmpeg_exists and ffprobe_exists:
-        print(f"FFmpeg already available: {ffmpeg_exists}")
-        return
-
-    print("Downloading static Linux FFmpeg build...")
+    print("Downloading modern static Linux FFmpeg build...")
     archive_url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
     archive_name = "ffmpeg-release-amd64-static.tar.xz"
 
@@ -40,17 +41,18 @@ def install_ffmpeg() -> None:
         ffmpeg_bin = os.path.join(ext_dir, "ffmpeg")
         ffprobe_bin = os.path.join(ext_dir, "ffprobe")
 
-        if os.path.isfile(ffmpeg_bin):
-            run_command(f"cp -f {ffmpeg_bin} /usr/bin/ffmpeg && chmod +x /usr/bin/ffmpeg")
-        if os.path.isfile(ffprobe_bin):
-            run_command(f"cp -f {ffprobe_bin} /usr/bin/ffprobe && chmod +x /usr/bin/ffprobe")
+        for dest_dir in ["/usr/local/bin", "/usr/bin"]:
+            if os.path.isfile(ffmpeg_bin):
+                run_command(f"cp -f {ffmpeg_bin} {dest_dir}/ffmpeg && chmod +x {dest_dir}/ffmpeg", check=False)
+            if os.path.isfile(ffprobe_bin):
+                run_command(f"cp -f {ffprobe_bin} {dest_dir}/ffprobe && chmod +x {dest_dir}/ffprobe", check=False)
 
         shutil.rmtree(ext_dir, ignore_errors=True)
 
     if os.path.isfile(archive_name):
         os.remove(archive_name)
 
-    print("FFmpeg & FFprobe successfully configured.")
+    print("Modern static FFmpeg & FFprobe successfully configured.")
 
 
 def setup_onnxruntime_gpu() -> None:
@@ -73,8 +75,8 @@ def setup_onnxruntime_gpu() -> None:
             except Exception:
                 pass
 
-    print("Installing clean onnxruntime-gpu for CUDA 12...")
-    run_command(f"{sys.executable} -m pip install --force-reinstall --no-cache-dir onnxruntime-gpu==1.19.2")
+    print("Installing clean onnxruntime-gpu for CUDA 12 and numpy 1.26.4...")
+    run_command(f"{sys.executable} -m pip install --force-reinstall --no-cache-dir onnxruntime-gpu==1.19.2 numpy==1.26.4")
 
     # Verification test
     verify_code = "import onnxruntime; from onnxruntime import InferenceSession; print('ONNX Runtime GPU loaded:', onnxruntime.__version__)"
@@ -113,7 +115,7 @@ def setup_models_bundle() -> None:
     assets_models_dir = os.path.join(repo_root, ".assets", "models")
     os.makedirs(assets_models_dir, exist_ok=True)
 
-    test_file = os.path.join(assets_models_dir, "inswapper_128.onnx")
+    test_file = os.path.join(assets_models_dir, "hyperswap_1a_256.onnx")
     if os.path.isfile(test_file) and os.path.getsize(test_file) > 100_000_000:
         print(f"Models already extracted in {assets_models_dir}")
         return
