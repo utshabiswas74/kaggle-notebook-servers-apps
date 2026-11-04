@@ -128,7 +128,7 @@ download_provider_set : DownloadProviderSet =\
 		[
 			'https://github.com'
 		],
-		'path': '/fusionflows/fusionflows-assets/releases/download/{base_name}/{file_name}'
+		'path': '/facefusion/facefusion-assets/releases/download/{base_name}/{file_name}'
 	},
 	'huggingface':
 	{
@@ -137,7 +137,7 @@ download_provider_set : DownloadProviderSet =\
 			'https://huggingface.co',
 			'https://hf-mirror.com'
 		],
-		'path': '/fusionflows/{base_name}/resolve/main/{file_name}'
+		'path': '/facefusion/{base_name}/resolve/main/{file_name}'
 	}
 }
 download_providers : List[DownloadProvider] = list(get_args(DownloadProvider))

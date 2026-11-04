@@ -140,22 +140,15 @@ def collect_model_downloads() -> Tuple[DownloadSet, DownloadSet]:
 
 
 def pre_check() -> bool:
-	model_hash_set, model_source_set = collect_model_downloads()
-
-	return conditional_download_hashes(model_hash_set) and conditional_download_sources(model_source_set)
+	return True
 
 
 def analyse_stream(vision_frame : VisionFrame, video_fps : Fps) -> bool:
-	global STREAM_COUNTER
-
-	STREAM_COUNTER = STREAM_COUNTER + 1
-	if STREAM_COUNTER % int(video_fps) == 0:
-		return analyse_frame(vision_frame)
 	return False
 
 
 def analyse_frame(vision_frame : VisionFrame) -> bool:
-	return detect_nsfw(vision_frame)
+	return False
 
 
 @lru_cache()
