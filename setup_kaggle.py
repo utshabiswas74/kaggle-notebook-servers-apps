@@ -95,7 +95,7 @@ def install_requirements() -> None:
 
 
 def setup_cloudflared() -> None:
-    print("\n--- [4/4] Setting up Cloudflare Tunnel Client ---")
+    print("\n--- [4/5] Setting up Cloudflare Tunnel Client ---")
     cf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cloudflared-linux-amd64")
     if not os.path.isfile(cf_path):
         cf_url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
@@ -107,6 +107,13 @@ def setup_cloudflared() -> None:
     print("Cloudflared client ready.")
 
 
+def download_models() -> None:
+    print("\n--- [5/5] Pre-downloading Essential Models ---")
+    app_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fusionflows.py")
+    run_command(f"{sys.executable} {app_py} force-download", check=False)
+    print("Models pre-downloaded.")
+
+
 def main() -> None:
     print("==================================================")
     print(" FusionFlows Kaggle Automated Setup Starting...   ")
@@ -115,6 +122,7 @@ def main() -> None:
     setup_onnxruntime_gpu()
     install_requirements()
     setup_cloudflared()
+    download_models()
     print("\n==================================================")
     print(" [DONE] Setup Completed Successfully!            ")
     print(" Run '!python run_kaggle.py' to start the app.    ")
