@@ -38,5 +38,6 @@ ENV/
 temp/
 .temp/
 *.log
+*logs.txt
 test_assets/
 *_screenshot.png
