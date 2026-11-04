@@ -1,5 +1,5 @@
-from facefusion import translator
-from facefusion.locales import LOCALES
+from fusionflows import translator
+from fusionflows.locales import LOCALES
 
 
 def test_load() -> None:

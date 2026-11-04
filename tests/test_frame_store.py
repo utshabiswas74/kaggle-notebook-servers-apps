@@ -1,9 +1,9 @@
 import pytest
 
-from facefusion import process_manager
-from facefusion.download import conditional_download
-from facefusion.frame_store import clear_frames, get_frame_store, reduce_frames, select_frame_set, set_frame
-from facefusion.vision import read_video_frame
+from fusionflows import process_manager
+from fusionflows.download import conditional_download
+from fusionflows.frame_store import clear_frames, get_frame_store, reduce_frames, select_frame_set, set_frame
+from fusionflows.vision import read_video_frame
 from .helper import get_test_example_file, get_test_examples_directory
 
 
@@ -12,7 +12,7 @@ def before_all() -> None:
 	process_manager.start()
 	conditional_download(get_test_examples_directory(),
 	[
-		'https://github.com/facefusion/facefusion-assets/releases/download/examples-3.0.0/target-240p.mp4'
+		'https://github.com/fusionflows/fusionflows-assets/releases/download/examples-3.0.0/target-240p.mp4'
 	])
 
 

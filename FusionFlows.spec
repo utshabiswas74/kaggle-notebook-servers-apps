@@ -28,7 +28,7 @@ tqdm_modules = collect_submodules('tqdm')
 groovy_modules = collect_submodules('groovy')
 
 # Collect hidden submodules
-facefusion_modules = collect_submodules('facefusion')
+fusionflows_modules = collect_submodules('fusionflows')
 gradio_modules = collect_submodules('gradio')
 gradio_client_modules = collect_submodules('gradio_client')
 gradio_rangeslider_modules = collect_submodules('gradio_rangeslider')
@@ -38,7 +38,7 @@ fastapi_modules = collect_submodules('fastapi')
 scipy_modules = collect_submodules('scipy')
 
 hidden_imports = list(set(
-    facefusion_modules +
+    fusionflows_modules +
     gradio_modules +
     gradio_client_modules +
     gradio_rangeslider_modules +
@@ -68,9 +68,9 @@ hidden_imports = list(set(
 app_datas = [
     ('fusionflows.ini', '.'),
     ('fusionflows.ico', '.'),
-    ('facefusion.ini', '.'),
-    ('facefusion.ico', '.'),
-    ('facefusion', 'facefusion'),
+    ('fusionflows.ini', '.'),
+    ('fusionflows.ico', '.'),
+    ('fusionflows', 'fusionflows'),
 ]
 
 # Binaries to embed (FFmpeg & FFprobe)

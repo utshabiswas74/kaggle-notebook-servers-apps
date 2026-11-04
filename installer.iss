@@ -17,7 +17,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "dist\FusionFlows.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "fusionflows.ini"; DestDir: "{app}"; Flags: ignoreversion
 Source: "fusionflows.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "facefusion\flowframes_bin\*"; DestDir: "{app}\flowframes_bin"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "fusionflows\flowframes_bin\*"; DestDir: "{app}\flowframes_bin"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\FusionFlows"; Filename: "{app}\FusionFlows.exe"; IconFilename: "{app}\fusionflows.ico"

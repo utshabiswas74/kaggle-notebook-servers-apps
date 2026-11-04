@@ -1,11 +1,11 @@
 
 import pytest
 
-from facefusion import face_detector, ffmpeg, ffmpeg_builder, process_manager, state_manager
-from facefusion.download import conditional_download
-from facefusion.face_detector import detect_with_retinaface, detect_with_scrfd, detect_with_yolo_face, detect_with_yunet
-from facefusion.face_helper import apply_nms, get_nms_threshold
-from facefusion.vision import read_static_image
+from fusionflows import face_detector, ffmpeg, ffmpeg_builder, process_manager, state_manager
+from fusionflows.download import conditional_download
+from fusionflows.face_detector import detect_with_retinaface, detect_with_scrfd, detect_with_yolo_face, detect_with_yunet
+from fusionflows.face_helper import apply_nms, get_nms_threshold
+from fusionflows.vision import read_static_image
 from .helper import get_test_example_file, get_test_examples_directory
 
 
@@ -14,7 +14,7 @@ def before_all() -> None:
 	process_manager.start()
 	conditional_download(get_test_examples_directory(),
 	[
-		'https://github.com/facefusion/facefusion-assets/releases/download/examples-3.0.0/source.jpg'
+		'https://github.com/fusionflows/fusionflows-assets/releases/download/examples-3.0.0/source.jpg'
 	])
 
 	for crop_scale in [ 80, 70, 60 ]:

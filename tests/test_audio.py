@@ -1,9 +1,9 @@
 
 import pytest
 
-from facefusion import ffmpeg, ffmpeg_builder, process_manager
-from facefusion.audio import get_audio_frame, read_static_audio
-from facefusion.download import conditional_download
+from fusionflows import ffmpeg, ffmpeg_builder, process_manager
+from fusionflows.audio import get_audio_frame, read_static_audio
+from fusionflows.download import conditional_download
 from .helper import get_test_example_file, get_test_examples_directory
 
 
@@ -12,7 +12,7 @@ def before_all() -> None:
 	process_manager.start()
 	conditional_download(get_test_examples_directory(),
 	[
-		'https://github.com/facefusion/facefusion-assets/releases/download/examples-3.0.0/source.mp3'
+		'https://github.com/fusionflows/fusionflows-assets/releases/download/examples-3.0.0/source.mp3'
 	])
 
 	ffmpeg.run_ffmpeg(

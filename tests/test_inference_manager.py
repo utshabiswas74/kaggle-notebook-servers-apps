@@ -5,9 +5,9 @@ from unittest.mock import Mock, patch
 import pytest
 from onnxruntime import InferenceSession
 
-from facefusion import content_analyser, state_manager
-from facefusion.execution import resolve_cache_path
-from facefusion.inference_manager import clear_inference_pool, get_inference_pool, resolve_static_inference_providers
+from fusionflows import content_analyser, state_manager
+from fusionflows.execution import resolve_cache_path
+from fusionflows.inference_manager import clear_inference_pool, get_inference_pool, resolve_static_inference_providers
 
 
 @pytest.fixture(scope = 'module', autouse = True)
@@ -29,17 +29,17 @@ def test_get_inference_pool(onnxruntime_version : Tuple[int, int, int], is_share
 	model_names = [ 'nsfw_1', 'nsfw_2', 'nsfw_3' ]
 	_, model_source_set = content_analyser.collect_model_downloads()
 
-	with patch('facefusion.inference_manager.has_execution_provider', return_value = True):
-		with patch('facefusion.inference_manager.get_onnxruntime_version', return_value = onnxruntime_version):
-			with patch('facefusion.inference_manager.detect_app_context', return_value = 'ui'):
-				clear_inference_pool('facefusion.content_analyser', model_names)
+	with patch('fusionflows.inference_manager.has_execution_provider', return_value = True):
+		with patch('fusionflows.inference_manager.get_onnxruntime_version', return_value = onnxruntime_version):
+			with patch('fusionflows.inference_manager.detect_app_context', return_value = 'ui'):
+				clear_inference_pool('fusionflows.content_analyser', model_names)
 
-			with patch('facefusion.inference_manager.detect_app_context', return_value = 'cli'):
-				clear_inference_pool('facefusion.content_analyser', model_names)
-				cli_inference_pool = get_inference_pool('facefusion.content_analyser', model_names, model_source_set)
+			with patch('fusionflows.inference_manager.detect_app_context', return_value = 'cli'):
+				clear_inference_pool('fusionflows.content_analyser', model_names)
+				cli_inference_pool = get_inference_pool('fusionflows.content_analyser', model_names, model_source_set)
 
-			with patch('facefusion.inference_manager.detect_app_context', return_value = 'ui'):
-				ui_inference_pool = get_inference_pool('facefusion.content_analyser', model_names, model_source_set)
+			with patch('fusionflows.inference_manager.detect_app_context', return_value = 'ui'):
+				ui_inference_pool = get_inference_pool('fusionflows.content_analyser', model_names, model_source_set)
 
 	assert isinstance(cli_inference_pool.get('nsfw_1'), InferenceSession)
 	assert (cli_inference_pool.get('nsfw_1') is ui_inference_pool.get('nsfw_1')) == is_shared
@@ -59,12 +59,12 @@ def test_resolve_static_inference_providers(override_module : SimpleNamespace, a
 	state_manager.init_item('execution_providers', ['coreml'])
 	resolve_static_inference_providers.cache_clear()
 
-	with patch('facefusion.inference_manager.importlib', Mock(import_module = Mock(return_value = override_module))):
+	with patch('fusionflows.inference_manager.importlib', Mock(import_module = Mock(return_value = override_module))):
 		inference_providers = resolve_static_inference_providers('override_module', 0)
 
 		assert inference_providers == [ ('CoreMLExecutionProvider', { 'ModelFormat': 'MLProgram' }) ]
 
-	with patch('facefusion.inference_manager.importlib', Mock(import_module = Mock(return_value = adjust_module))):
+	with patch('fusionflows.inference_manager.importlib', Mock(import_module = Mock(return_value = adjust_module))):
 		inference_providers = resolve_static_inference_providers('adjust_module', 0)
 
 		assert inference_providers == [ ('CoreMLExecutionProvider', { 'SpecializationStrategy': 'FastPrediction', 'ModelCacheDirectory': resolve_cache_path(), 'ModelFormat': 'MLProgram' }) ]

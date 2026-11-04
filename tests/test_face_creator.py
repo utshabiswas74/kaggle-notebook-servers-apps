@@ -2,11 +2,11 @@
 import numpy
 import pytest
 
-from facefusion import face_classifier, face_detector, face_landmarker, face_recognizer, ffmpeg, ffmpeg_builder, process_manager, state_manager
-from facefusion.download import conditional_download
-from facefusion.face_creator import average_face_geometry, get_many_faces, get_one_face, refill_faces
-from facefusion.face_store import clear_faces
-from facefusion.vision import read_static_image
+from fusionflows import face_classifier, face_detector, face_landmarker, face_recognizer, ffmpeg, ffmpeg_builder, process_manager, state_manager
+from fusionflows.download import conditional_download
+from fusionflows.face_creator import average_face_geometry, get_many_faces, get_one_face, refill_faces
+from fusionflows.face_store import clear_faces
+from fusionflows.vision import read_static_image
 from .helper import get_test_example_file, get_test_examples_directory
 
 
@@ -15,7 +15,7 @@ def before_all() -> None:
 	process_manager.start()
 	conditional_download(get_test_examples_directory(),
 	[
-		'https://github.com/facefusion/facefusion-assets/releases/download/examples-3.0.0/source.jpg'
+		'https://github.com/fusionflows/fusionflows-assets/releases/download/examples-3.0.0/source.jpg'
 	])
 
 	for crop_scale in [ 80, 70, 60 ]:

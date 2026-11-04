@@ -1,13 +1,13 @@
 import numpy
 import pytest
 
-from facefusion import face_classifier, face_detector, face_landmarker, face_recognizer, state_manager
-from facefusion.common_helper import get_first, get_last
-from facefusion.download import conditional_download
-from facefusion.face_creator import get_many_faces, get_one_face
-from facefusion.face_store import clear_faces
-from facefusion.face_tracker import create_face_tracks, select_face_track, track_faces
-from facefusion.vision import read_static_video_frame, select_video_frames
+from fusionflows import face_classifier, face_detector, face_landmarker, face_recognizer, state_manager
+from fusionflows.common_helper import get_first, get_last
+from fusionflows.download import conditional_download
+from fusionflows.face_creator import get_many_faces, get_one_face
+from fusionflows.face_store import clear_faces
+from fusionflows.face_tracker import create_face_tracks, select_face_track, track_faces
+from fusionflows.vision import read_static_video_frame, select_video_frames
 from .helper import get_test_example_file, get_test_examples_directory
 
 
@@ -15,7 +15,7 @@ from .helper import get_test_example_file, get_test_examples_directory
 def before_all() -> None:
 	conditional_download(get_test_examples_directory(),
 	[
-		'https://github.com/facefusion/facefusion-assets/releases/download/examples-3.0.0/target-240p.mp4'
+		'https://github.com/fusionflows/fusionflows-assets/releases/download/examples-3.0.0/target-240p.mp4'
 	])
 
 	state_manager.init_item('execution_device_ids', [ 0 ])

@@ -24,7 +24,7 @@ try:
 except Exception:
 	pass
 
-from facefusion import conda, core
+from fusionflows import conda, core
 
 if __name__ == '__main__':
 	multiprocessing.freeze_support()

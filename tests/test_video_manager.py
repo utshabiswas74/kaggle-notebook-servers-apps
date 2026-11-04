@@ -3,13 +3,13 @@ import tempfile
 import numpy
 import pytest
 
-from facefusion import ffmpeg, ffmpeg_builder, process_manager, state_manager
-from facefusion.common_helper import is_linux, is_macos, is_windows
-from facefusion.download import conditional_download
-from facefusion.ffprobe import extract_video_metadata
-from facefusion.frame_store import get_frame_store
-from facefusion.temp_helper import create_temp_directory, get_temp_file_path
-from facefusion.video_manager import clear_video_pool, close_video_reader, close_video_writer, collect_video_frames, conditional_seek_video_reader, drain_video_reader, get_reader, get_writer, read_video_frame, read_video_frames, seek_video_reader, write_video_frame
+from fusionflows import ffmpeg, ffmpeg_builder, process_manager, state_manager
+from fusionflows.common_helper import is_linux, is_macos, is_windows
+from fusionflows.download import conditional_download
+from fusionflows.ffprobe import extract_video_metadata
+from fusionflows.frame_store import get_frame_store
+from fusionflows.temp_helper import create_temp_directory, get_temp_file_path
+from fusionflows.video_manager import clear_video_pool, close_video_reader, close_video_writer, collect_video_frames, conditional_seek_video_reader, drain_video_reader, get_reader, get_writer, read_video_frame, read_video_frames, seek_video_reader, write_video_frame
 from .helper import get_test_example_file, get_test_examples_directory
 
 
@@ -18,7 +18,7 @@ def before_all() -> None:
 	process_manager.start()
 	conditional_download(get_test_examples_directory(),
 	[
-		'https://github.com/facefusion/facefusion-assets/releases/download/examples-3.0.0/target-240p.mp4'
+		'https://github.com/fusionflows/fusionflows-assets/releases/download/examples-3.0.0/target-240p.mp4'
 	])
 
 	for video_fps in [ 25, 30 ]:
