@@ -132,9 +132,11 @@ def setup_models_bundle() -> None:
     if os.path.isfile(zip_path):
         os.remove(zip_path)
 
-    # Ensure auxiliary models (fan_68_5, xseg_1, bisenet_resnet_34) are present
+    # Ensure auxiliary models (hyperswap_1a_256, fan_68_5, xseg_1, bisenet_resnet_34) are present
     base_release_url = "https://github.com/utshabiswas74/kaggle-notebook-servers-apps/releases/download/v1.0.0"
     aux_files = [
+        "hyperswap_1a_256.onnx",
+        "hyperswap_1a_256.hash",
         "fan_68_5.onnx",
         "fan_68_5.hash",
         "xseg_1.onnx",
@@ -145,13 +147,42 @@ def setup_models_bundle() -> None:
     for filename in aux_files:
         dest_path = os.path.join(assets_models_dir, filename)
         if not os.path.isfile(dest_path) or os.path.getsize(dest_path) == 0:
-            print(f"Fetching auxiliary model asset: {filename}...")
+            print(f"Fetching model asset: {filename}...")
             run_command(f"wget -q -c {base_release_url}/{filename} -O {dest_path}", check=False)
-            # Fallback if needed
-            if (not os.path.isfile(dest_path) or os.path.getsize(dest_path) == 0) and filename.startswith("fan_"):
-                run_command(f"wget -q -c https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/{filename} -O {dest_path}", check=False)
+            # Reliable fallbacks
+            if (not os.path.isfile(dest_path) or os.path.getsize(dest_path) == 0):
+                if filename.startswith("hyperswap"):
+                    run_command(f"wget -q -c https://github.com/facefusion/facefusion-assets/releases/download/models-3.3.0/{filename} -O {dest_path}", check=False)
+                elif filename.startswith("fan_"):
+                    run_command(f"wget -q -c https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/{filename} -O {dest_path}", check=False)
 
     print("All essential neural models are extracted and ready.")
+
+
+def setup_rife_linux() -> None:
+    print("\n--- Configuring FusionFlows RIFE 3.1 Linux Binary ---")
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    flowframes_bin_dir = os.path.join(repo_root, "fusionflows", "flowframes_bin")
+    os.makedirs(flowframes_bin_dir, exist_ok=True)
+    rife_bin = os.path.join(flowframes_bin_dir, "rife-ncnn-vulkan")
+
+    if os.path.isfile(rife_bin) and os.path.getsize(rife_bin) > 5_000_000:
+        os.chmod(rife_bin, 0o755)
+        print("RIFE Linux binary already present.")
+        return
+
+    rife_zip_url = "https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-ubuntu.zip"
+    temp_zip = "/tmp/rife-ubuntu.zip"
+    run_command(f"wget -q -c {rife_zip_url} -O {temp_zip}")
+    run_command(f"unzip -q -j -o {temp_zip} 'rife-ncnn-vulkan-20221029-ubuntu/rife-ncnn-vulkan' -d {flowframes_bin_dir}")
+    if os.path.isfile(temp_zip):
+        os.remove(temp_zip)
+    if os.path.isfile(rife_bin):
+        os.chmod(rife_bin, 0o755)
+        run_command(f"cp -f {rife_bin} /usr/local/bin/rife-ncnn-vulkan && chmod +x /usr/local/bin/rife-ncnn-vulkan", check=False)
+        print("RIFE Linux binary successfully installed and verified.")
+    else:
+        print("[WARNING] Could not extract rife-ncnn-vulkan binary.", file=sys.stderr)
 
 
 def main() -> None:
@@ -163,6 +194,7 @@ def main() -> None:
     install_requirements()
     setup_cloudflared()
     setup_models_bundle()
+    setup_rife_linux()
     print("\n==================================================")
     print(" [DONE] Setup Completed Successfully!            ")
     print(" Run '!python run_kaggle.py' to start the app.    ")

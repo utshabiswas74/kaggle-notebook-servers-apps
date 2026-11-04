@@ -668,7 +668,10 @@ def prepare_tile_frame(tile_vision_frame : VisionFrame) -> VisionFrame:
 
 
 def normalize_tile_frame(tile_vision_frame : VisionFrame) -> VisionFrame:
-	tile_vision_frame = tile_vision_frame.transpose(0, 2, 3, 1).squeeze(0) * 255
+	if tile_vision_frame.ndim == 4:
+		tile_vision_frame = tile_vision_frame.transpose(0, 2, 3, 1).squeeze(0) * 255
+	elif tile_vision_frame.ndim == 3:
+		tile_vision_frame = tile_vision_frame.transpose(1, 2, 0) * 255
 	tile_vision_frame = tile_vision_frame.clip(0, 255).astype(numpy.uint8)[:, :, ::-1]
 	return tile_vision_frame
 

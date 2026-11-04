@@ -13,28 +13,37 @@ from fusionflows.ffprobe import extract_video_fps, extract_video_metadata, probe
 
 def get_rife_executable() -> Optional[str]:
 	possible_paths = [
+		os.path.join(os.path.dirname(__file__), 'flowframes_bin', 'rife-ncnn-vulkan'),
 		os.path.join(os.path.dirname(__file__), 'flowframes_bin', 'rife-ncnn-vulkan.exe'),
-		os.path.join(getattr(sys, '_MEIPASS', ''), 'fusionflows', 'flowframes_bin', 'rife-ncnn-vulkan.exe'),
-		os.path.join(getattr(sys, '_MEIPASS', ''), 'flowframes_bin', 'rife-ncnn-vulkan.exe'),
-		os.path.join(os.path.dirname(sys.executable), 'fusionflows', 'flowframes_bin', 'rife-ncnn-vulkan.exe'),
-		os.path.join(os.path.dirname(sys.executable), 'flowframes_bin', 'rife-ncnn-vulkan.exe'),
-		os.path.expandvars(r'%LOCALAPPDATA%\Programs\FusionFlows\fusionflows\flowframes_bin\rife-ncnn-vulkan.exe'),
-		os.path.expandvars(r'%LOCALAPPDATA%\Programs\FusionFlows\flowframes_bin\rife-ncnn-vulkan.exe'),
-		os.path.expandvars(r'%LOCALAPPDATA%\Programs\FusionFlows\fusionflows\flowframes_bin\rife-ncnn-vulkan.exe'),
-		os.path.expandvars(r'%LOCALAPPDATA%\Programs\FusionFlows\flowframes_bin\rife-ncnn-vulkan.exe')
+		shutil.which('rife-ncnn-vulkan'),
+		'/usr/local/bin/rife-ncnn-vulkan',
+		'/usr/bin/rife-ncnn-vulkan',
+		os.path.join(getattr(sys, '_MEIPASS', ''), 'fusionflows', 'flowframes_bin', 'rife-ncnn-vulkan'),
+		os.path.join(getattr(sys, '_MEIPASS', ''), 'flowframes_bin', 'rife-ncnn-vulkan'),
+		os.path.join(os.path.dirname(sys.executable), 'fusionflows', 'flowframes_bin', 'rife-ncnn-vulkan'),
+		os.path.join(os.path.dirname(sys.executable), 'flowframes_bin', 'rife-ncnn-vulkan')
 	]
 	for path in possible_paths:
 		if path and os.path.isfile(path):
+			try:
+				os.chmod(path, 0o755)
+			except Exception:
+				pass
 			return os.path.abspath(path)
 	return None
 
 
 def get_rife_model_dir() -> Optional[str]:
+	candidate_dirs = [
+		os.path.join(os.path.dirname(__file__), 'flowframes_bin', 'models', 'rife-v3.1'),
+		os.path.join(os.path.dirname(__file__), 'flowframes_bin', 'models', 'rife-v4'),
+		os.path.join(os.path.dirname(__file__), 'flowframes_bin', 'models')
+	]
 	exe_path = get_rife_executable()
 	if exe_path:
-		base_dir = os.path.dirname(exe_path)
-		model_dir = os.path.join(base_dir, 'models', 'rife-v3.1')
-		if os.path.isdir(model_dir):
+		candidate_dirs.insert(0, os.path.join(os.path.dirname(exe_path), 'models', 'rife-v3.1'))
+	for model_dir in candidate_dirs:
+		if model_dir and os.path.isdir(model_dir):
 			return os.path.abspath(model_dir)
 	return None
 

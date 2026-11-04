@@ -786,6 +786,9 @@ def normalize_crop_frame(crop_vision_frame : VisionFrame) -> VisionFrame:
 	model_mean = get_model_options().get('mean')
 	model_standard_deviation = get_model_options().get('standard_deviation')
 
+	if crop_vision_frame.ndim == 4:
+		crop_vision_frame = crop_vision_frame[0]
+
 	crop_vision_frame = crop_vision_frame.transpose(1, 2, 0)
 
 	if model_type in [ 'ghost', 'hififace', 'hyperswap', 'uniface' ]:
