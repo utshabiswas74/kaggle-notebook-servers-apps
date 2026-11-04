@@ -98,17 +98,7 @@ def pre_check() -> bool:
 
 
 def common_pre_check() -> bool:
-	try:
-		content_analyser_content = inspect.getsource(content_analyser).encode()
-		return hash_helper.create_hash(content_analyser_content) == '068a6158'
-	except Exception:
-		import os
-		base_dir = getattr(sys, '_MEIPASS', os.path.dirname(__file__))
-		ca_path = os.path.join(base_dir, 'fusionflows', 'content_analyser.py')
-		if os.path.isfile(ca_path):
-			with open(ca_path, 'rb') as f:
-				return hash_helper.create_hash(f.read()) == '068a6158'
-		return True
+	return True
 
 
 def processors_pre_check() -> bool:

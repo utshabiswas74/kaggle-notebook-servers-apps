@@ -43,7 +43,7 @@ def run_app(port: int = 7860) -> None:
         sys.executable,
         app_py,
         "run",
-        "--execution-providers", "cuda"
+        "--execution-providers", "cuda", "cpu"
     ]
 
     print(f"[EXEC] {' '.join(cmd)}\n")
@@ -52,7 +52,8 @@ def run_app(port: int = 7860) -> None:
     # Run the application in foreground
     app_proc = subprocess.Popen(cmd)
     try:
-        app_proc.wait()
+        ret = app_proc.wait()
+        print(f"\n[PROCESS] FusionFlows process terminated with exit code {ret}")
     except KeyboardInterrupt:
         print("\nStopping FusionFlows...")
         app_proc.terminate()
