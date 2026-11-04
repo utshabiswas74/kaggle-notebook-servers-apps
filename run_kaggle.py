@@ -36,14 +36,13 @@ def start_tunnel(token: str, cf_bin: str) -> subprocess.Popen:
 
 
 def run_app(port: int = 7860) -> None:
-    print("\n[2/2] Launching FusionFlows on GPU (port {port})...")
+    print(f"\n[2/2] Launching FusionFlows on GPU (port {port})...")
     app_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fusionflows.py")
 
     cmd = [
         sys.executable,
         app_py,
         "run",
-        "--open-browser", "false",
         "--execution-providers", "cuda"
     ]
 
