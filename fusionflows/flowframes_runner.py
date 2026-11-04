@@ -66,6 +66,22 @@ def get_factor_multiplier(factor_str: Optional[str]) -> int:
 	return 2
 
 
+def check_and_fetch_rife_models(model_dir: str) -> bool:
+	required = ['flownet.bin', 'contextnet.bin', 'fusionnet.bin', 'flownet.param', 'contextnet.param', 'fusionnet.param']
+	for fname in required:
+		fpath = os.path.join(model_dir, fname)
+		if not os.path.isfile(fpath) or os.path.getsize(fpath) == 0:
+			url = f"https://github.com/nihui/rife-ncnn-vulkan/raw/20221029/models/rife-v3.1/{fname}"
+			logger.warn(f"[FUSIONFLOWS] Model {fname} missing from {model_dir}. Downloading from {url}...", __name__)
+			try:
+				import urllib.request
+				urllib.request.urlretrieve(url, fpath)
+			except Exception as e:
+				logger.error(f"[FUSIONFLOWS] Failed to fetch {fname}: {e}", __name__)
+				return False
+	return True
+
+
 def run_ffmpeg_motion_interpolation(
 	video_path: str,
 	target_fps: float,
@@ -76,15 +92,15 @@ def run_ffmpeg_motion_interpolation(
 		cmd = [
 			'ffmpeg', '-y',
 			'-i', video_path,
-			'-vf', f"minterpolate=fps={target_fps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir",
+			'-vf', f"minterpolate=fps={target_fps}:mi_mode=blend",
 			'-c:v', 'libx264',
 			'-crf', '18',
-			'-preset', 'fast',
+			'-preset', 'veryfast',
 			'-pix_fmt', 'yuv420p',
 			'-c:a', 'copy',
 			temp_fallback
 		]
-		logger.info(f"[FUSIONFLOWS] Executing FFmpeg Motion Compensated Interpolation to {target_fps} FPS...", __name__)
+		logger.info(f"[FUSIONFLOWS] Executing fast Motion Interpolation to {target_fps} FPS...", __name__)
 		res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 		if res.returncode == 0 and os.path.isfile(temp_fallback) and os.path.getsize(temp_fallback) > 0:
 			if os.path.exists(output_path):
@@ -104,10 +120,10 @@ def run_ffmpeg_motion_interpolation(
 			return True
 
 		err_msg = res.stderr.decode(errors='ignore') if res.stderr else "Unknown error"
-		logger.error(f"[FUSIONFLOWS] Motion Compensated Interpolation failed: {err_msg}", __name__)
+		logger.error(f"[FUSIONFLOWS] Motion Interpolation failed: {err_msg}", __name__)
 		return False
 	except Exception as e:
-		logger.error(f"[FUSIONFLOWS] Motion Compensated Interpolation exception: {e}", __name__)
+		logger.error(f"[FUSIONFLOWS] Motion Interpolation exception: {e}", __name__)
 		return False
 	finally:
 		if os.path.exists(temp_fallback):
@@ -162,8 +178,8 @@ def interpolate_video_with_progress(
 	rife_exe = get_rife_executable()
 	model_dir = get_rife_model_dir()
 
-	if not rife_exe or not model_dir:
-		logger.warn("[FUSIONFLOWS] RIFE 3.1 binaries not detected. Using FFmpeg Motion Interpolation...", __name__)
+	if not rife_exe or not model_dir or not check_and_fetch_rife_models(model_dir):
+		logger.warn("[FUSIONFLOWS] RIFE 3.1 binaries or models unavailable. Using Fast Motion Interpolation...", __name__)
 		yield (None, f"Using Motion Interpolation to generate {target_fps} FPS...")
 		if run_ffmpeg_motion_interpolation(video_path, target_fps, output_path):
 			complete_msg = f"[FUSIONFLOWS] 2x FPS Video Interpolation complete ({current_fps} -> {target_fps} FPS)!"

@@ -165,36 +165,66 @@ def setup_rife_linux() -> None:
     flowframes_bin_dir = os.path.join(repo_root, "fusionflows", "flowframes_bin")
     os.makedirs(flowframes_bin_dir, exist_ok=True)
     rife_bin = os.path.join(flowframes_bin_dir, "rife-ncnn-vulkan")
+    model_31_dir = os.path.join(flowframes_bin_dir, "models", "rife-v3.1")
+    os.makedirs(model_31_dir, exist_ok=True)
 
     # 1. Install Vulkan Loader and OpenMP dependencies via apt-get
     print("Installing Vulkan loader and runtime tools (libvulkan1, libgomp1)...")
     run_command("apt-get update -qq && apt-get install -y -qq libvulkan1 libvulkan-dev vulkan-tools libgomp1", check=False)
 
-    # 2. Configure NVIDIA Vulkan ICD registration
-    icd_dir = "/usr/share/vulkan/icd.d"
-    os.makedirs(icd_dir, exist_ok=True)
-    icd_file = os.path.join(icd_dir, "nvidia_icd.json")
-    if not os.path.isfile(icd_file):
+    # 2. Configure NVIDIA Vulkan ICD registration with discovered library path
+    nvidia_glx_candidates = (
+        glob.glob("/usr/lib/**/libGLX_nvidia.so*", recursive=True) +
+        glob.glob("/usr/local/nvidia/**/libGLX_nvidia.so*", recursive=True) +
+        glob.glob("/usr/**/libnvidia-glcore.so*", recursive=True)
+    )
+    nvidia_lib_path = nvidia_glx_candidates[0] if nvidia_glx_candidates else "libGLX_nvidia.so.0"
+
+    for icd_base in ["/usr/share/vulkan/icd.d", "/etc/vulkan/icd.d"]:
+        os.makedirs(icd_base, exist_ok=True)
+        icd_file = os.path.join(icd_base, "nvidia_icd.json")
         try:
             with open(icd_file, "w") as f:
-                f.write('{\n    "file_format_version" : "1.0.0",\n    "ICD": {\n        "library_path": "libGLX_nvidia.so.0",\n        "api_version" : "1.3"\n    }\n}\n')
-            print(f"Registered NVIDIA Vulkan ICD at {icd_file}")
+                f.write('{\n    "file_format_version" : "1.0.0",\n    "ICD": {\n        "library_path": "' + nvidia_lib_path + '",\n        "api_version" : "1.3"\n    }\n}\n')
+            print(f"Configured NVIDIA Vulkan ICD at {icd_file} -> {nvidia_lib_path}")
         except Exception as e:
             print(f"[WARNING] Could not write Vulkan ICD: {e}", file=sys.stderr)
 
-    # 3. Download and extract rife-ncnn-vulkan binary if not already present
-    if not os.path.isfile(rife_bin) or os.path.getsize(rife_bin) < 5_000_000:
+    # 3. Download and extract full archive (binary + all models)
+    required_models = ["flownet.bin", "contextnet.bin", "fusionnet.bin", "flownet.param", "contextnet.param", "fusionnet.param"]
+    missing_models = [m for m in required_models if not os.path.isfile(os.path.join(model_31_dir, m)) or os.path.getsize(os.path.join(model_31_dir, m)) == 0]
+
+    if not os.path.isfile(rife_bin) or os.path.getsize(rife_bin) < 5_000_000 or missing_models:
         rife_zip_url = "https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-ubuntu.zip"
         temp_zip = "/tmp/rife-ubuntu.zip"
-        print("Downloading rife-ncnn-vulkan Ubuntu binary...")
+        temp_dir = "/tmp/rife_extracted"
+        print("Downloading rife-ncnn-vulkan Ubuntu binary and models...")
         run_command(f"wget -q -c {rife_zip_url} -O {temp_zip}")
-        run_command(f"unzip -q -j -o {temp_zip} 'rife-ncnn-vulkan-20221029-ubuntu/rife-ncnn-vulkan' -d {flowframes_bin_dir}")
+        run_command(f"unzip -q -o {temp_zip} -d {temp_dir}")
+
+        extracted_pkg = os.path.join(temp_dir, "rife-ncnn-vulkan-20221029-ubuntu")
+        if os.path.isdir(extracted_pkg):
+            # Install binary
+            src_bin = os.path.join(extracted_pkg, "rife-ncnn-vulkan")
+            if os.path.isfile(src_bin):
+                shutil.copy2(src_bin, rife_bin)
+                shutil.copy2(src_bin, "/usr/local/bin/rife-ncnn-vulkan")
+            # Install all models
+            for item in os.listdir(extracted_pkg):
+                src_item = os.path.join(extracted_pkg, item)
+                if os.path.isdir(src_item) and item.startswith("rife-"):
+                    dest_model_dir = os.path.join(flowframes_bin_dir, "models", item)
+                    os.makedirs(dest_model_dir, exist_ok=True)
+                    for mf in os.listdir(src_item):
+                        shutil.copy2(os.path.join(src_item, mf), os.path.join(dest_model_dir, mf))
+
         if os.path.isfile(temp_zip):
             os.remove(temp_zip)
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
     if os.path.isfile(rife_bin):
         os.chmod(rife_bin, 0o755)
-        run_command(f"cp -f {rife_bin} /usr/local/bin/rife-ncnn-vulkan && chmod +x /usr/local/bin/rife-ncnn-vulkan", check=False)
+        run_command(f"chmod +x {rife_bin} /usr/local/bin/rife-ncnn-vulkan", check=False)
         print("RIFE Linux binary successfully installed.")
     else:
         print("[WARNING] Could not extract rife-ncnn-vulkan binary.", file=sys.stderr)
@@ -210,7 +240,16 @@ def setup_rife_linux() -> None:
                 except Exception:
                     pass
 
-    # 5. Diagnostic check of dependencies
+    # 5. Verify presence of all RIFE 3.1 model weights
+    for mf in required_models:
+        full_mf = os.path.join(model_31_dir, mf)
+        if os.path.isfile(full_mf) and os.path.getsize(full_mf) > 0:
+            print(f"[OK] RIFE Model verified: {mf} ({os.path.getsize(full_mf)} bytes)")
+        else:
+            print(f"[WARNING] Missing {mf}, downloading directly...", file=sys.stderr)
+            run_command(f"wget -q -c https://github.com/nihui/rife-ncnn-vulkan/raw/20221029/models/rife-v3.1/{mf} -O {full_mf}", check=False)
+
+    # 6. Diagnostic check of dependencies
     print("Verifying binary dependencies with ldd...")
     run_command(f"ldd {rife_bin}", check=False)
 

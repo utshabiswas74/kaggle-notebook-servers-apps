@@ -34,6 +34,9 @@ ENV/
 *.safetensors
 *.hash
 
+# Keep RIFE 3.1 models in repo
+!fusionflows/flowframes_bin/models/**
+
 # Temporary files
 temp/
 .temp/
