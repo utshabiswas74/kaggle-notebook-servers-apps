@@ -160,29 +160,59 @@ def setup_models_bundle() -> None:
 
 
 def setup_rife_linux() -> None:
-    print("\n--- Configuring FusionFlows RIFE 3.1 Linux Binary ---")
+    print("\n--- [6/6] Configuring FusionFlows RIFE 3.1 & Vulkan Subsystem ---")
     repo_root = os.path.dirname(os.path.abspath(__file__))
     flowframes_bin_dir = os.path.join(repo_root, "fusionflows", "flowframes_bin")
     os.makedirs(flowframes_bin_dir, exist_ok=True)
     rife_bin = os.path.join(flowframes_bin_dir, "rife-ncnn-vulkan")
 
-    if os.path.isfile(rife_bin) and os.path.getsize(rife_bin) > 5_000_000:
-        os.chmod(rife_bin, 0o755)
-        print("RIFE Linux binary already present.")
-        return
+    # 1. Install Vulkan Loader and OpenMP dependencies via apt-get
+    print("Installing Vulkan loader and runtime tools (libvulkan1, libgomp1)...")
+    run_command("apt-get update -qq && apt-get install -y -qq libvulkan1 libvulkan-dev vulkan-tools libgomp1", check=False)
 
-    rife_zip_url = "https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-ubuntu.zip"
-    temp_zip = "/tmp/rife-ubuntu.zip"
-    run_command(f"wget -q -c {rife_zip_url} -O {temp_zip}")
-    run_command(f"unzip -q -j -o {temp_zip} 'rife-ncnn-vulkan-20221029-ubuntu/rife-ncnn-vulkan' -d {flowframes_bin_dir}")
-    if os.path.isfile(temp_zip):
-        os.remove(temp_zip)
+    # 2. Configure NVIDIA Vulkan ICD registration
+    icd_dir = "/usr/share/vulkan/icd.d"
+    os.makedirs(icd_dir, exist_ok=True)
+    icd_file = os.path.join(icd_dir, "nvidia_icd.json")
+    if not os.path.isfile(icd_file):
+        try:
+            with open(icd_file, "w") as f:
+                f.write('{\n    "file_format_version" : "1.0.0",\n    "ICD": {\n        "library_path": "libGLX_nvidia.so.0",\n        "api_version" : "1.3"\n    }\n}\n')
+            print(f"Registered NVIDIA Vulkan ICD at {icd_file}")
+        except Exception as e:
+            print(f"[WARNING] Could not write Vulkan ICD: {e}", file=sys.stderr)
+
+    # 3. Download and extract rife-ncnn-vulkan binary if not already present
+    if not os.path.isfile(rife_bin) or os.path.getsize(rife_bin) < 5_000_000:
+        rife_zip_url = "https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-ubuntu.zip"
+        temp_zip = "/tmp/rife-ubuntu.zip"
+        print("Downloading rife-ncnn-vulkan Ubuntu binary...")
+        run_command(f"wget -q -c {rife_zip_url} -O {temp_zip}")
+        run_command(f"unzip -q -j -o {temp_zip} 'rife-ncnn-vulkan-20221029-ubuntu/rife-ncnn-vulkan' -d {flowframes_bin_dir}")
+        if os.path.isfile(temp_zip):
+            os.remove(temp_zip)
+
     if os.path.isfile(rife_bin):
         os.chmod(rife_bin, 0o755)
         run_command(f"cp -f {rife_bin} /usr/local/bin/rife-ncnn-vulkan && chmod +x /usr/local/bin/rife-ncnn-vulkan", check=False)
-        print("RIFE Linux binary successfully installed and verified.")
+        print("RIFE Linux binary successfully installed.")
     else:
         print("[WARNING] Could not extract rife-ncnn-vulkan binary.", file=sys.stderr)
+
+    # 4. Link libvulkan.so.1 into binary and library directories for failsafe discovery
+    found_vulkan = glob.glob("/usr/lib/**/libvulkan.so*", recursive=True)
+    if found_vulkan:
+        src_vulkan = found_vulkan[0]
+        for dest in ["/usr/lib/libvulkan.so.1", "/usr/local/lib/libvulkan.so.1", os.path.join(flowframes_bin_dir, "libvulkan.so.1")]:
+            if not os.path.isfile(dest):
+                try:
+                    os.symlink(src_vulkan, dest)
+                except Exception:
+                    pass
+
+    # 5. Diagnostic check of dependencies
+    print("Verifying binary dependencies with ldd...")
+    run_command(f"ldd {rife_bin}", check=False)
 
 
 def main() -> None:

@@ -66,6 +66,57 @@ def get_factor_multiplier(factor_str: Optional[str]) -> int:
 	return 2
 
 
+def run_ffmpeg_motion_interpolation(
+	video_path: str,
+	target_fps: float,
+	output_path: str
+) -> bool:
+	temp_fallback = output_path + ".fallback.mp4"
+	try:
+		cmd = [
+			'ffmpeg', '-y',
+			'-i', video_path,
+			'-vf', f"minterpolate=fps={target_fps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir",
+			'-c:v', 'libx264',
+			'-crf', '18',
+			'-preset', 'fast',
+			'-pix_fmt', 'yuv420p',
+			'-c:a', 'copy',
+			temp_fallback
+		]
+		logger.info(f"[FUSIONFLOWS] Executing FFmpeg Motion Compensated Interpolation to {target_fps} FPS...", __name__)
+		res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+		if res.returncode == 0 and os.path.isfile(temp_fallback) and os.path.getsize(temp_fallback) > 0:
+			if os.path.exists(output_path):
+				os.remove(output_path)
+			shutil.move(temp_fallback, output_path)
+			return True
+
+		# Retry with audio re-encode in case copy fails
+		cmd[-3] = 'aac'
+		cmd.insert(-2, '-b:a')
+		cmd.insert(-2, '192k')
+		res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+		if res.returncode == 0 and os.path.isfile(temp_fallback) and os.path.getsize(temp_fallback) > 0:
+			if os.path.exists(output_path):
+				os.remove(output_path)
+			shutil.move(temp_fallback, output_path)
+			return True
+
+		err_msg = res.stderr.decode(errors='ignore') if res.stderr else "Unknown error"
+		logger.error(f"[FUSIONFLOWS] Motion Compensated Interpolation failed: {err_msg}", __name__)
+		return False
+	except Exception as e:
+		logger.error(f"[FUSIONFLOWS] Motion Compensated Interpolation exception: {e}", __name__)
+		return False
+	finally:
+		if os.path.exists(temp_fallback):
+			try:
+				os.remove(temp_fallback)
+			except OSError:
+				pass
+
+
 def interpolate_video(
 	video_path: str,
 	factor_str: Optional[str] = None,
@@ -92,15 +143,6 @@ def interpolate_video_with_progress(
 		yield (video_path, "Original FPS preserved (1x)")
 		return
 
-	rife_exe = get_rife_executable()
-	model_dir = get_rife_model_dir()
-
-	if not rife_exe or not model_dir:
-		err_msg = "[FUSIONFLOWS] RIFE 3.1 not installed on Linux, keeping original video"
-		logger.warn(err_msg, __name__)
-		yield (video_path, err_msg)
-		return
-
 	if output_path is None:
 		dir_name = os.path.dirname(video_path)
 		base_name, ext = os.path.splitext(os.path.basename(video_path))
@@ -116,6 +158,21 @@ def interpolate_video_with_progress(
 		current_fps = extract_video_fps(entries) or 30.0
 		total_input_frames = 0
 		target_fps = round(current_fps * factor, 2)
+
+	rife_exe = get_rife_executable()
+	model_dir = get_rife_model_dir()
+
+	if not rife_exe or not model_dir:
+		logger.warn("[FUSIONFLOWS] RIFE 3.1 binaries not detected. Using FFmpeg Motion Interpolation...", __name__)
+		yield (None, f"Using Motion Interpolation to generate {target_fps} FPS...")
+		if run_ffmpeg_motion_interpolation(video_path, target_fps, output_path):
+			complete_msg = f"[FUSIONFLOWS] 2x FPS Video Interpolation complete ({current_fps} -> {target_fps} FPS)!"
+			logger.info(complete_msg, __name__)
+			yield (output_path, complete_msg)
+			return
+		else:
+			yield (video_path, "[FUSIONFLOWS] Interpolation unavailable, keeping original video.")
+			return
 
 	init_msg = f"[FUSIONFLOWS] Initializing FusionFlows RIFE 3.1: {current_fps} FPS -> {target_fps} FPS ({factor}x multiplier)"
 	logger.info(init_msg, __name__)
@@ -196,10 +253,21 @@ def interpolate_video_with_progress(
 				'-m', model_dir
 			]
 
+			env = os.environ.copy()
+			extra_ld_paths = [
+				os.path.dirname(rife_exe),
+				'/usr/lib/x86_64-linux-gnu',
+				'/usr/local/lib',
+				'/usr/lib64'
+			]
+			current_ld = env.get('LD_LIBRARY_PATH', '')
+			env['LD_LIBRARY_PATH'] = ':'.join(extra_ld_paths) + (':' + current_ld if current_ld else '')
+
 			proc = subprocess.Popen(
 				cmd_rife,
 				stdout=subprocess.DEVNULL,
-				stderr=subprocess.DEVNULL
+				stderr=subprocess.PIPE,
+				env=env
 			)
 
 			last_logged_pct = -10
@@ -223,10 +291,24 @@ def interpolate_video_with_progress(
 			proc.wait()
 
 			if proc.returncode != 0:
-				err_msg = f"[FUSIONFLOWS] RIFE 3.1 failed on Pass {pass_idx} with exit code {proc.returncode}."
-				logger.error(err_msg, __name__)
-				yield (None, err_msg)
-				return
+				err_output = ""
+				try:
+					if proc.stderr:
+						err_output = proc.stderr.read().decode(errors='ignore').strip()
+				except Exception:
+					pass
+				err_msg = f"[FUSIONFLOWS] RIFE 3.1 failed on Pass {pass_idx} with exit code {proc.returncode}: {err_output}"
+				logger.warn(f"{err_msg}. Triggering automatic High-Quality Motion Interpolation Fallback...", __name__)
+				yield (None, f"RIFE error ({proc.returncode}). Using Motion Interpolation to generate {target_fps} FPS...")
+
+				if run_ffmpeg_motion_interpolation(video_path, target_fps, output_path):
+					complete_msg = f"[FUSIONFLOWS] 2x FPS Video Interpolation complete ({current_fps} -> {target_fps} FPS)!"
+					logger.info(complete_msg, __name__)
+					yield (output_path, complete_msg)
+					return
+				else:
+					yield (None, err_msg)
+					return
 
 			current_frames = len(glob.glob(os.path.join(current_out_dir, '*.png')))
 			logger.info(f"[FUSIONFLOWS] Pass {pass_idx}/{total_passes} complete! {current_frames} frames generated.", __name__)
@@ -282,7 +364,12 @@ def interpolate_video_with_progress(
 			return
 		else:
 			err_str = res_asm.stderr.decode(errors='ignore') if res_asm.stderr else "Unknown error"
-			logger.error(f"[FUSIONFLOWS] Assembly failed: {err_str}", __name__)
+			logger.warn(f"[FUSIONFLOWS] Assembly failed: {err_str}. Trying motion interpolation fallback...", __name__)
+			if run_ffmpeg_motion_interpolation(video_path, target_fps, output_path):
+				complete_msg = f"[FUSIONFLOWS] 2x FPS Video Interpolation complete ({current_fps} -> {target_fps} FPS)!"
+				logger.info(complete_msg, __name__)
+				yield (output_path, complete_msg)
+				return
 			yield (None, f"Error assembling video: {err_str}")
 			return
 
