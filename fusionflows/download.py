@@ -1,5 +1,6 @@
 import os
 import subprocess
+import time
 from functools import lru_cache
 from typing import List, Optional, Tuple
 from urllib.parse import urlparse
@@ -15,7 +16,7 @@ from fusionflows.types import Command, DownloadProvider, DownloadSet
 
 def open_curl(commands : List[Command]) -> subprocess.Popen[bytes]:
 	commands = curl_builder.run(commands)
-	return subprocess.Popen(commands, stdin = subprocess.PIPE, stdout = subprocess.PIPE)
+	return subprocess.Popen(commands, stdin = subprocess.DEVNULL, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
 
 def conditional_download(download_directory_path : str, urls : List[str]) -> None:
@@ -29,18 +30,24 @@ def conditional_download(download_directory_path : str, urls : List[str]) -> Non
 			with tqdm(total = download_size, initial = initial_size, desc = translator.get('downloading'), unit = 'B', unit_scale = True, unit_divisor = 1024, ascii = ' =', disable = state_manager.get_item('log_level') in [ 'warn', 'error' ]) as progress:
 				commands = curl_builder.chain(
 					curl_builder.download(url, download_file_path),
-					curl_builder.set_timeout(5),
+					curl_builder.set_timeout(10),
 					curl_builder.set_retry(5)
 				)
 
-				open_curl(commands)
+				proc = open_curl(commands)
 				current_size = initial_size
 				progress.set_postfix(download_providers = state_manager.get_item('download_providers'), file_name = download_file_name)
 
 				while current_size < download_size:
+					time.sleep(0.1)
 					if is_file(download_file_path):
 						current_size = get_file_size(download_file_path)
 						progress.update(current_size - progress.n)
+					if proc.poll() is not None:
+						if is_file(download_file_path):
+							current_size = get_file_size(download_file_path)
+							progress.update(current_size - progress.n)
+						break
 
 
 @lru_cache(maxsize = 64)

@@ -7,7 +7,7 @@ from fusionflows.types import Command
 
 
 def run(commands : List[Command]) -> List[Command]:
-	user_agent = metadata.get('name') + '/' + metadata.get('version')
+	user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 	return [ shutil.which('curl'), '--user-agent', user_agent, '--location', '--silent', '--ssl-no-revoke' ] + commands
 
