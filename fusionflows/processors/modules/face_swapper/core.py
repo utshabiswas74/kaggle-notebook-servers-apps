@@ -669,6 +669,9 @@ def swap_face(source_face : Face, target_face : Face, source_vision_frame : Visi
 
 def forward_swap_face(source_face : Face, target_face : Face, source_vision_frame : VisionFrame, crop_vision_frame : VisionFrame) -> VisionFrame:
 	face_swapper = get_inference_pool().get('face_swapper')
+	if face_swapper is None:
+		logger.error('face_swapper session not found in inference pool', __name__)
+		return crop_vision_frame
 	model_type = get_model_options().get('type')
 	face_swapper_inputs = {}
 
@@ -736,9 +739,9 @@ def prepare_source_embedding(source_face : Face) -> Embedding:
 	if model_type == 'inswapper':
 		model_path = get_model_options().get('sources').get('face_swapper').get('path')
 		model_initializer = get_static_model_initializer(model_path)
-		source_embedding = source_face.embedding.reshape((1, -1))
+		source_embedding = source_face.embedding.reshape((1, -1)).astype(model_initializer.dtype)
 		source_embedding = numpy.dot(source_embedding, model_initializer) / numpy.linalg.norm(source_embedding)
-		return source_embedding
+		return source_embedding.astype(numpy.float32)
 
 	source_embedding = source_face.embedding.reshape(-1, 512)
 	_, source_embedding_norm = convert_source_embedding(source_embedding)

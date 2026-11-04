@@ -115,7 +115,7 @@ def setup_models_bundle() -> None:
     assets_models_dir = os.path.join(repo_root, ".assets", "models")
     os.makedirs(assets_models_dir, exist_ok=True)
 
-    test_file = os.path.join(assets_models_dir, "hyperswap_1a_256.onnx")
+    test_file = os.path.join(assets_models_dir, "inswapper_128.onnx")
     if os.path.isfile(test_file) and os.path.getsize(test_file) > 100_000_000:
         print(f"Models already extracted in {assets_models_dir}")
         return
