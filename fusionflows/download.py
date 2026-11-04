@@ -14,9 +14,10 @@ from fusionflows.hash_helper import validate_hash
 from fusionflows.types import Command, DownloadProvider, DownloadSet
 
 
-def open_curl(commands : List[Command]) -> subprocess.Popen[bytes]:
+def open_curl(commands : List[Command], capture_stdout : bool = False) -> subprocess.Popen[bytes]:
 	commands = curl_builder.run(commands)
-	return subprocess.Popen(commands, stdin = subprocess.DEVNULL, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+	stdout = subprocess.PIPE if capture_stdout else subprocess.DEVNULL
+	return subprocess.Popen(commands, stdin = subprocess.DEVNULL, stdout = stdout, stderr = subprocess.DEVNULL)
 
 
 def conditional_download(download_directory_path : str, urls : List[str]) -> None:
@@ -34,7 +35,7 @@ def conditional_download(download_directory_path : str, urls : List[str]) -> Non
 					curl_builder.set_retry(5)
 				)
 
-				proc = open_curl(commands)
+				proc = open_curl(commands, capture_stdout = False)
 				current_size = initial_size
 				progress.set_postfix(download_providers = state_manager.get_item('download_providers'), file_name = download_file_name)
 
@@ -57,14 +58,15 @@ def get_static_download_size(url : str) -> int:
 		curl_builder.set_timeout(5)
 	)
 
-	process = open_curl(commands)
-	lines = reversed(process.stdout.readlines())
+	process = open_curl(commands, capture_stdout = True)
+	stdout, _ = process.communicate()
+	lines = reversed(stdout.splitlines())
 
 	for line in lines:
-		__line__ = line.decode().lower()
+		__line__ = line.decode('utf-8', errors='ignore').lower()
 		if 'content-length:' in __line__:
 			_, content_length = __line__.split('content-length:')
-			return int(content_length)
+			return int(content_length.strip())
 
 	return 0
 
@@ -76,7 +78,7 @@ def ping_static_url(url : str) -> bool:
 		curl_builder.set_timeout(5)
 	)
 
-	process = open_curl(commands)
+	process = open_curl(commands, capture_stdout = True)
 	process.communicate()
 	return process.returncode == 0
 
