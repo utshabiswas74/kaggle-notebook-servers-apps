@@ -73,8 +73,8 @@ def setup_onnxruntime_gpu() -> None:
             except Exception:
                 pass
 
-    print("Installing clean onnxruntime-gpu...")
-    run_command(f"{sys.executable} -m pip install --force-reinstall --no-cache-dir onnxruntime-gpu")
+    print("Installing clean onnxruntime-gpu for CUDA 12...")
+    run_command(f"{sys.executable} -m pip install --force-reinstall --no-cache-dir onnxruntime-gpu==1.19.2")
 
     # Verification test
     verify_code = "import onnxruntime; from onnxruntime import InferenceSession; print('ONNX Runtime GPU loaded:', onnxruntime.__version__)"
@@ -129,6 +129,26 @@ def setup_models_bundle() -> None:
 
     if os.path.isfile(zip_path):
         os.remove(zip_path)
+
+    # Ensure auxiliary models (fan_68_5, xseg_1, bisenet_resnet_34) are present
+    base_release_url = "https://github.com/utshabiswas74/kaggle-notebook-servers-apps/releases/download/v1.0.0"
+    aux_files = [
+        "fan_68_5.onnx",
+        "fan_68_5.hash",
+        "xseg_1.onnx",
+        "xseg_1.hash",
+        "bisenet_resnet_34.onnx",
+        "bisenet_resnet_34.hash"
+    ]
+    for filename in aux_files:
+        dest_path = os.path.join(assets_models_dir, filename)
+        if not os.path.isfile(dest_path) or os.path.getsize(dest_path) == 0:
+            print(f"Fetching auxiliary model asset: {filename}...")
+            run_command(f"wget -q -c {base_release_url}/{filename} -O {dest_path}", check=False)
+            # Fallback if needed
+            if (not os.path.isfile(dest_path) or os.path.getsize(dest_path) == 0) and filename.startswith("fan_"):
+                run_command(f"wget -q -c https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/{filename} -O {dest_path}", check=False)
+
     print("All essential neural models are extracted and ready.")
 
 
